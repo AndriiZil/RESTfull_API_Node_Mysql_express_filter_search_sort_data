@@ -30,7 +30,6 @@ class QueryService {
   }
 
   getFilters(filters) {
-    // console.log(filters);
     let query = ' WHERE';
 
     for (let key in filters) {
@@ -69,7 +68,6 @@ class QueryService {
   }
 
   async _createPersonalInfo(personInfo, personId) {
-    // const personInfo = body.personalInfo;
     if (personInfo === undefined) {
       throw new Error('Incoming personalInfo\'s Data is incorrect!')
     }
