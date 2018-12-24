@@ -1,10 +1,14 @@
 const express = require('express');
 const app = express();
 const bodyParser = require('body-parser');
-const PORT = process.env.PORT || 8080;
+const jwt = require('jsonwebtoken');
 const logger = require('morgan');
-const queryService = require('./services/queryService');
+const PORT = process.env.PORT || 8080;
 
+const authentication = require('./routes/auth');
+const registration = require('./routes/register');
+
+const queryService = require('./services/queryService');
 
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
@@ -12,21 +16,43 @@ app.set('json spaces', 2);
 
 app.use(logger('dev'));
 
+app.use('/api/login', authentication);
+app.use('/api/register', registration);
+
+app.use((req, res, next) => {
+  const token = req.headers['Authorization'];
+  if (token) {
+    const secret = process.env.SECRET_KEY;
+    jwt.verify(token, secret, (err, decoded) => {
+      if (err) {
+        return res.json({ success: false, message: 'Failed to authenticate token.' });
+      } else {
+        req.decoded = decoded;
+        next();
+      }
+    });
+  } else {
+    return res.status(403).send({
+      success: false,
+      message: 'No token provided.'
+    });
+  }
+});
+
 app.get('/', (req, res) => {
   return res.send({ "error" : false, message: 'Wellcome to the Home Page' })
 });
 
-app.get('/persons', async (req, res) => {
+app.get('/api/persons', async (req, res) => {
   try {
-    const queryParams = req.query;
-    const data = await queryService.getPersons(queryParams);
+    const data = await queryService.getPersons(req.query);
     res.send(data)
   } catch (e) {
     console.log(e);
   }
 });
 
-app.get('/persons/:id', async (req, res) => {
+app.get('/api/persons/:id', async (req, res) => {
   try {
     const data = await queryService.getPersonById(req.params.id);
     res.send(data)
@@ -35,7 +61,7 @@ app.get('/persons/:id', async (req, res) => {
   }
 });
 
-app.post('/persons', async (req, res) => {
+app.post('/api/persons', async (req, res) => {
   try {
     const data = await queryService.createPerson(req.body);
     res.send(data)
@@ -44,7 +70,7 @@ app.post('/persons', async (req, res) => {
   }
 });
 
-app.put('/persons/:id', async (req, res) => {
+app.put('/api/persons/:id', async (req, res) => {
   try {
     const data = await queryService.updatePerson(req.params.id, req.body);
     res.send(data)
@@ -53,7 +79,7 @@ app.put('/persons/:id', async (req, res) => {
   }
 });
 
-app.delete('/persons/:id', async (req, res) => {
+app.delete('/api/persons/:id', async (req, res) => {
   try {
     const data = await queryService.deletePerson(req.params.id);
     res.send(data)
@@ -67,4 +93,4 @@ app.all('*', (req, res, next) => {
   next();
 });
 
-app.listen(PORT, console.log(`SERVER STARTED ON PORT ${PORT}`));
+app.listen(PORT, () => console.log(`SERVER STARTED ON PORT ${PORT}`));
